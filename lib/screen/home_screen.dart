@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/product_catalog.dart';
 import '../models/product.dart';
+import 'category_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +15,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int selectedIndex = 0;
   final TextEditingController searchController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
+
+  // Category filter
+  String? _selectedCategory;
 
   // ============================================================
   // AH STORE THEME
@@ -34,7 +38,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool get _isSearching => _searchQuery.isNotEmpty;
 
+  bool get _isFilteringCategory =>
+      _selectedCategory != null && !_isSearching;
+
   List<Product> get _searchResults => ProductCatalog.search(_searchQuery);
+
+  List<Product> get _categoryResults {
+    final category = _selectedCategory;
+    if (category == null || category.isEmpty) return [];
+
+    return ProductCatalog.products
+        .where(
+          (product) =>
+              product.category.toLowerCase() == category.toLowerCase(),
+        )
+        .toList();
+  }
 
   @override
   void dispose() {
@@ -44,6 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _applySearch(String value) {
+    _selectedCategory = null;
+
     searchController.value = TextEditingValue(
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
@@ -53,8 +74,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearSearch() {
     searchController.clear();
+    _selectedCategory = null;
     searchFocusNode.unfocus();
     setState(() {});
+  }
+
+  void _applyCategoryFilter(String category) {
+    searchController.clear();
+    searchFocusNode.unfocus();
+
+    setState(() {
+      _selectedCategory = category;
+      selectedIndex = 0;
+    });
+  }
+
+  void _clearCategoryFilter() {
+    setState(() {
+      _selectedCategory = null;
+      selectedIndex = 0;
+    });
   }
 
   @override
@@ -263,6 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     if (_isSearching)
                       ..._searchSlivers()
+                    else if (_isFilteringCategory)
+                      ..._categoryFilterSlivers()
                     else
                       ..._homeSlivers(),
                   ],
@@ -280,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          height: 58,
+          height: 68,
           decoration: const BoxDecoration(
             color: Color(0xFF080B0E),
             border: Border(
@@ -535,6 +576,17 @@ class _HomeScreenState extends State<HomeScreen> {
         child: _sectionTitle(
           'Categories',
           'See All  →',
+          onAction: () async {
+            final String? category = await Navigator.push<String>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CategoryScreen(),
+              ),
+            );
+            if (category != null && category.isNotEmpty) {
+              _applyCategoryFilter(category);
+            }
+          },
         ),
       ),
 
@@ -637,6 +689,73 @@ class _HomeScreenState extends State<HomeScreen> {
         )
       else
         _productGrid(popular),
+    ];
+  }
+
+  List<Widget> _categoryFilterSlivers() {
+    final results = _categoryResults;
+    final category = _selectedCategory ?? '';
+
+    return [
+      SliverToBoxAdapter(
+        child: _sectionTitle(
+          '$category Products${results.isNotEmpty ? ' (${results.length})' : ''}',
+          'Clear',
+          onAction: _clearCategoryFilter,
+        ),
+      ),
+      if (results.isEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 28, 14, 40),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 28,
+              ),
+              decoration: BoxDecoration(
+                color: card,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: border,
+                  width: 0.8,
+                ),
+              ),
+              child: const Column(
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    color: lightGold,
+                    size: 28,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'No products in this category',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Try another category.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: grey,
+                      fontSize: 8,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        )
+      else
+        _productGrid(results),
     ];
   }
 
@@ -877,7 +996,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return SizedBox(
       width: 62,
       child: GestureDetector(
-        onTap: () => _applySearch(title),
+        onTap: () async {
+          final String? category = await Navigator.push<String>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const CategoryScreen(),
+            ),
+          );
+          if (category != null && category.isNotEmpty) {
+            _applyCategoryFilter(category);
+          }
+        },
         child: Column(
           children: [
             Container(
@@ -1196,46 +1325,63 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     final bool active = selectedIndex == index;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedIndex = index;
-        });
-      },
-      child: SizedBox(
-        width: 55,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 17,
-              color: active ? lightGold : const Color(0xFF69655E),
-            ),
-
-            const SizedBox(height: 2),
-
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? lightGold : const Color(0xFF69655E),
-                fontSize: 6,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () async {
+          if (index == 1) {
+            final String? category = await Navigator.push<String>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CategoryScreen(),
               ),
-            ),
+            );
+            if (category != null && category.isNotEmpty) {
+              _applyCategoryFilter(category);
+            }
+            return;
+          }
 
-            const SizedBox(height: 2),
+          setState(() {
+            selectedIndex = index;
+          });
+        },
+        child: SizedBox(
+          width: 62,
+          height: 64,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: active ? lightGold : const Color(0xFF69655E),
+              ),
 
-            if (active)
-              Container(
-                width: 13,
-                height: 2,
-                decoration: BoxDecoration(
-                  color: lightGold,
-                  borderRadius: BorderRadius.circular(5),
+              const SizedBox(height: 3),
+
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? lightGold : const Color(0xFF69655E),
+                  fontSize: 8,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
-          ],
+
+              const SizedBox(height: 3),
+
+              if (active)
+                Container(
+                  width: 16,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: lightGold,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
