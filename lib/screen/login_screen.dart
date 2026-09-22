@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 
@@ -14,7 +16,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -23,11 +28,154 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ============================================================
+  // SHOW MESSAGE
+  // ============================================================
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: const Color(0xFF193754),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // LOGIN
+  // ============================================================
+
+  Future<void> _login() async {
+    FocusScope.of(context).unfocus();
+
+    final String email = emailController.text.trim();
+    final String password = passwordController.text;
+
+    // Empty email
+    if (email.isEmpty) {
+      _showMessage('Please enter your email address.');
+      return;
+    }
+
+    // Empty password
+    if (password.isEmpty) {
+      _showMessage('Please enter your password.');
+      return;
+    }
+
+    // Basic email validation
+    final bool emailIsValid = RegExp(
+      r'^[\w\.-]+@[\w\.-]+\.\w+$',
+    ).hasMatch(email);
+
+    if (!emailIsValid) {
+      _showMessage('Please enter a valid email address.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Firebase Authentication login
+      await _authService.login(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Login successful
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      String message = 'Unable to login. Please try again.';
+
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with this email.';
+          break;
+
+        case 'wrong-password':
+          message = 'Incorrect email or password.';
+          break;
+
+        case 'invalid-credential':
+          message = 'Incorrect email or password.';
+          break;
+
+        case 'invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+
+        case 'too-many-requests':
+          message = 'Too many attempts. Please try again later.';
+          break;
+
+        case 'network-request-failed':
+          message =
+              'Network error. Please check your internet connection.';
+          break;
+
+        default:
+          message = 'Incorrect email or password.';
+      }
+
+      _showMessage(message);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _showMessage(
+        'Something went wrong. Please try again.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF080705),
-
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -43,6 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // LOGO
                 // ==================================================
+
                 Container(
                   width: 120,
                   height: 120,
@@ -51,7 +200,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFB89532).withValues(alpha: 0.25),
+                        color:
+                            const Color(0xFFB89532).withValues(alpha: 0.25),
                         blurRadius: 30,
                         spreadRadius: 2,
                       ),
@@ -75,6 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // TITLE
                 // ==================================================
+
                 const Text(
                   'WELCOME BACK',
                   textAlign: TextAlign.center,
@@ -103,6 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // EMAIL LABEL
                 // ==================================================
+
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -121,9 +273,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // EMAIL FIELD
                 // ==================================================
+
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -134,35 +288,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Color(0xFF666158),
                       fontSize: 13,
                     ),
-
                     prefixIcon: const Icon(
                       Icons.email_outlined,
                       color: Color(0xFF9A8236),
                       size: 20,
                     ),
-
                     filled: true,
                     fillColor: const Color(0xFF11100D),
-
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 17,
                     ),
-
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
                         color: Color(0xFF3D3728),
                       ),
                     ),
-
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
                         color: Color(0xFF3D3728),
                       ),
                     ),
-
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
@@ -178,6 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // PASSWORD LABEL
                 // ==================================================
+
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -196,9 +345,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // PASSWORD FIELD
                 // ==================================================
+
                 TextField(
                   controller: passwordController,
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) {
+                    if (!_isLoading) {
+                      _login();
+                    }
+                  },
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -209,13 +365,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Color(0xFF666158),
                       fontSize: 13,
                     ),
-
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Color(0xFF9A8236),
                       size: 20,
                     ),
-
                     suffixIcon: MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: IconButton(
@@ -233,29 +387,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                     filled: true,
                     fillColor: const Color(0xFF11100D),
-
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 17,
                     ),
-
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
                         color: Color(0xFF3D3728),
                       ),
                     ),
-
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
                         color: Color(0xFF3D3728),
                       ),
                     ),
-
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
@@ -271,6 +420,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // PASSWORD REQUIREMENT
                 // ==================================================
+
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Row(
@@ -284,7 +434,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Password must contain at least one special character',
+                          'Enter the password you used when creating your account.',
                           style: TextStyle(
                             color: Color(0xFF746F66),
                             fontSize: 10.5,
@@ -300,36 +450,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // LOGIN BUTTON
                 // ==================================================
+
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
+                    cursor: _isLoading
+                        ? SystemMouseCursors.wait
+                        : SystemMouseCursors.click,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HomeScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC5A33D),
+                        disabledBackgroundColor:
+                            const Color(0xFF806B2D),
                         foregroundColor: const Color(0xFF080705),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        'LOGIN',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2.5,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF080705),
+                                ),
+                              ),
+                            )
+                          : const Text(
+                              'LOGIN',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2.5,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -339,6 +499,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // SIGN UP OPTION
                 // ==================================================
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -350,7 +511,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    // SIGN UP
                     MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
@@ -382,6 +542,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ==================================================
                 // BOTTOM BRANDING
                 // ==================================================
+
                 const Text(
                   'AH STORE  •  CURATED STYLE',
                   style: TextStyle(

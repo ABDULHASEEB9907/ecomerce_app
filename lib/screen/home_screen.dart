@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import '../data/product_catalog.dart';
 import '../models/product.dart';
 import 'category_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isGuest;
+
+  const HomeScreen({
+    super.key,
+    this.isGuest = false,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -69,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
     );
+
     setState(() {});
   }
 
@@ -105,8 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, constraints) {
             final double screenWidth = constraints.maxWidth;
 
-            // Mobile style width.
-            // Desktop/browser par bhi layout unnecessarily stretch nahi hoga.
             final double contentWidth =
                 screenWidth > 430 ? 430 : screenWidth;
 
@@ -188,8 +193,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
                             const SizedBox(width: 7),
 
+                            // PROFILE
                             _circleButton(
                               Icons.person_outline_rounded,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ProfileScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -258,7 +272,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: white,
                                     fontSize: 9,
                                   ),
-                                  textInputAction: TextInputAction.search,
+                                  textInputAction:
+                                      TextInputAction.search,
                                   decoration: const InputDecoration(
                                     isDense: true,
                                     border: InputBorder.none,
@@ -403,7 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Stack(
                 clipBehavior: Clip.hardEdge,
                 children: [
-                  // PRODUCT IMAGE
                   Positioned(
                     right: 0,
                     top: 0,
@@ -416,7 +430,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // DARK GRADIENT
                   Positioned.fill(
                     child: Container(
                       decoration: const BoxDecoration(
@@ -440,7 +453,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // TEXT
                   Positioned(
                     left: 12,
                     top: 10,
@@ -455,14 +467,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF1B1A15,
-                            ),
+                            color: const Color(0xFF1B1A15),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: const Color(
-                                0xFF665326,
-                              ),
+                              color: const Color(0xFF665326),
                             ),
                           ),
                           child: const Text(
@@ -515,7 +523,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(
                           height: 25,
                           child: ElevatedButton(
-                            onPressed: () => _applySearch('shoes'),
+                            onPressed: () =>
+                                _applySearch('shoes'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: gold,
                               foregroundColor: background,
@@ -524,7 +533,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
+                                borderRadius:
+                                    BorderRadius.circular(5),
                               ),
                             ),
                             child: const Text(
@@ -577,12 +587,14 @@ class _HomeScreenState extends State<HomeScreen> {
           'Categories',
           'See All  →',
           onAction: () async {
-            final String? category = await Navigator.push<String>(
+            final String? category =
+                await Navigator.push<String>(
               context,
               MaterialPageRoute(
                 builder: (_) => const CategoryScreen(),
               ),
             );
+
             if (category != null && category.isNotEmpty) {
               _applyCategoryFilter(category);
             }
@@ -613,6 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   separatorBuilder: (_, __) => _space(),
                   itemBuilder: (context, index) {
                     final category = categories[index];
+
                     return _category(
                       category.image,
                       category.name,
@@ -655,7 +668,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 2,
                   ),
                   itemCount: featured.length,
-                  separatorBuilder: (_, __) => _featuredSpace(),
+                  separatorBuilder: (_, __) =>
+                      _featuredSpace(),
                   itemBuilder: (context, index) {
                     return _featured(featured[index]);
                   },
@@ -707,7 +721,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (results.isEmpty)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 28, 14, 40),
+            padding: const EdgeInsets.fromLTRB(
+              14,
+              28,
+              14,
+              40,
+            ),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
@@ -775,7 +794,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (results.isEmpty)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 28, 14, 40),
+            padding: const EdgeInsets.fromLTRB(
+              14,
+              28,
+              14,
+              40,
+            ),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
@@ -840,7 +864,8 @@ class _HomeScreenState extends State<HomeScreen> {
           (context, index) => _popular(products[index]),
           childCount: products.length,
         ),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 7,
           mainAxisSpacing: 7,
@@ -852,8 +877,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ============================================================
   // SAFE IMAGE
-  // Tries the local asset first. If the file is missing, it uses a
-  // matching network image so the Home Page still looks complete.
   // ============================================================
 
   Widget _safeImage(
@@ -862,7 +885,8 @@ class _HomeScreenState extends State<HomeScreen> {
     double iconSize = 18,
     String? imageUrl,
   }) {
-    final fallbackUrl = imageUrl ?? ProductCatalog.fallbackFor(path);
+    final fallbackUrl =
+        imageUrl ?? ProductCatalog.fallbackFor(path);
 
     Widget placeholder() {
       return Container(
@@ -885,9 +909,12 @@ class _HomeScreenState extends State<HomeScreen> {
         fallbackUrl,
         fit: fit,
         alignment: Alignment.center,
-        errorBuilder: (context, error, stackTrace) => placeholder(),
-        loadingBuilder: (context, child, loadingProgress) {
+        errorBuilder: (context, error, stackTrace) =>
+            placeholder(),
+        loadingBuilder:
+            (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
+
           return Container(
             color: imageBackground,
             alignment: Alignment.center,
@@ -908,7 +935,8 @@ class _HomeScreenState extends State<HomeScreen> {
       path,
       fit: fit,
       alignment: Alignment.center,
-      errorBuilder: (context, error, stackTrace) => networkImage(),
+      errorBuilder: (context, error, stackTrace) =>
+          networkImage(),
     );
   }
 
@@ -916,11 +944,14 @@ class _HomeScreenState extends State<HomeScreen> {
   // HEADER BUTTON
   // ============================================================
 
-  Widget _circleButton(IconData icon) {
+  Widget _circleButton(
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {},
+        onTap: onTap ?? () {},
         child: Container(
           width: 32,
           height: 32,
@@ -997,12 +1028,14 @@ class _HomeScreenState extends State<HomeScreen> {
       width: 62,
       child: GestureDetector(
         onTap: () async {
-          final String? category = await Navigator.push<String>(
+          final String? category =
+              await Navigator.push<String>(
             context,
             MaterialPageRoute(
               builder: (_) => const CategoryScreen(),
             ),
           );
+
           if (category != null && category.isNotEmpty) {
             _applyCategoryFilter(category);
           }
@@ -1059,11 +1092,14 @@ class _HomeScreenState extends State<HomeScreen> {
   // FEATURED PRODUCT
   // ============================================================
 
-  Widget _featured(Product product) {
+  Widget _featured(
+    Product product, {
+    VoidCallback? onTap,
+  }) {
     return SizedBox(
       width: 118,
       child: GestureDetector(
-        onTap: () {},
+        onTap: onTap ?? () {},
         child: Container(
           height: 156,
           padding: const EdgeInsets.all(5),
@@ -1076,9 +1112,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
-              // PRODUCT IMAGE
               Container(
                 height: 72,
                 width: double.infinity,
@@ -1097,7 +1133,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 5),
 
-              // PRODUCT NAME
               Text(
                 product.name,
                 maxLines: 1,
@@ -1111,7 +1146,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 3),
 
-              // RATING
               Row(
                 children: [
                   const Icon(
@@ -1141,7 +1175,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const Spacer(),
 
-              // PRICE
               Text(
                 product.price,
                 style: const TextStyle(
@@ -1180,10 +1213,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            // ----------------------------------------------------
-            // LARGE PRODUCT IMAGE
-            // ----------------------------------------------------
-
             SizedBox(
               width: 62,
               child: AspectRatio(
@@ -1206,14 +1235,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(width: 7),
 
-            // ----------------------------------------------------
-            // PRODUCT DETAILS
-            // ----------------------------------------------------
-
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.name,
@@ -1276,10 +1303,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(width: 3),
 
-            // ----------------------------------------------------
-            // CART BUTTON
-            // ----------------------------------------------------
-
             Container(
               width: 21,
               height: 21,
@@ -1308,7 +1331,9 @@ class _HomeScreenState extends State<HomeScreen> {
       width: active ? 11 : 4,
       height: 4,
       decoration: BoxDecoration(
-        color: active ? lightGold : const Color(0xFF555047),
+        color: active
+            ? lightGold
+            : const Color(0xFF555047),
         borderRadius: BorderRadius.circular(10),
       ),
     );
@@ -1330,15 +1355,36 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GestureDetector(
         onTap: () async {
           if (index == 1) {
-            final String? category = await Navigator.push<String>(
+            final String? category =
+                await Navigator.push<String>(
               context,
               MaterialPageRoute(
                 builder: (_) => const CategoryScreen(),
               ),
             );
-            if (category != null && category.isNotEmpty) {
+
+            if (category != null &&
+                category.isNotEmpty) {
               _applyCategoryFilter(category);
             }
+
+            return;
+          }
+
+          if (index == 4) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ProfileScreen(),
+              ),
+            );
+
+            if (mounted) {
+              setState(() {
+                selectedIndex = 0;
+              });
+            }
+
             return;
           }
 
@@ -1350,12 +1396,15 @@ class _HomeScreenState extends State<HomeScreen> {
           width: 62,
           height: 64,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
                 size: 22,
-                color: active ? lightGold : const Color(0xFF69655E),
+                color: active
+                    ? lightGold
+                    : const Color(0xFF69655E),
               ),
 
               const SizedBox(height: 3),
@@ -1363,9 +1412,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: active ? lightGold : const Color(0xFF69655E),
+                  color: active
+                      ? lightGold
+                      : const Color(0xFF69655E),
                   fontSize: 8,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: active
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
               ),
 
@@ -1377,7 +1430,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 2,
                   decoration: BoxDecoration(
                     color: lightGold,
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius:
+                        BorderRadius.circular(5),
                   ),
                 ),
             ],
@@ -1387,3 +1441,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
